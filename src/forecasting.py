@@ -22,6 +22,7 @@ def rolling_average_prediction(df, window=3):
         df["new_actual"]
         .rolling(window=window)
         .mean()
+        .shift(1)
     )
 
     return df
