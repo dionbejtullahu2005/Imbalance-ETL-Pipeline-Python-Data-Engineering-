@@ -2,7 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPORT_DIR = BASE_DIR / "output" / "reports"
 
@@ -10,7 +9,6 @@ REPORT_DIR.mkdir(
     parents=True,
     exist_ok=True
 )
-
 
 def rolling_average_prediction(df, window=3):
     """
@@ -27,8 +25,6 @@ def rolling_average_prediction(df, window=3):
     )
 
     return df
-
-
 
 def calculate_forecast_metrics(df):
     """
@@ -86,7 +82,6 @@ def calculate_forecast_metrics(df):
         100
     )
 
-
     return pd.DataFrame(
         {
             "Model": [
@@ -105,8 +100,6 @@ def calculate_forecast_metrics(df):
             ]
         }
     )
-
-
 
 def plot_forecasting_comparison(df):
 
@@ -163,8 +156,6 @@ def plot_forecasting_comparison(df):
 
     plt.close()
 
-
-
 def run_forecasting(df):
 
     df_forecast = rolling_average_prediction(
@@ -180,6 +171,5 @@ def run_forecasting(df):
     plot_forecasting_comparison(
         df_forecast
     )
-
-
+    
     return metrics, df_forecast
