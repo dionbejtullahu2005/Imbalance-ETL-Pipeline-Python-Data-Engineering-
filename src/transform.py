@@ -16,7 +16,6 @@ def clean_columns(df):
         .str.strip()
     )
 
-
     column_map = {
 
         "Data": "date",
@@ -58,8 +57,6 @@ def clean_columns(df):
 
     return df
 
-
-
 def calculate_metrics(df):
 
     df["new_actual"] = (
@@ -97,21 +94,15 @@ def calculate_metrics(df):
 
     return df
 
-
-
-
 def transform(df):
 
     df = clean_columns(df)
 
     df = calculate_metrics(df)
 
-
-    # =================================================
     # DST AWARE DATETIME
     # Kosovo timezone
     # Excel hour: 1-24
-    # =================================================
 
     df["datetime"] = (
         pd.to_datetime(
@@ -127,6 +118,5 @@ def transform(df):
             nonexistent="shift_forward"
         )
     )
-
 
     return df
