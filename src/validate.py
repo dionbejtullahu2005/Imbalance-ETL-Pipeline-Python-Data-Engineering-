@@ -38,13 +38,9 @@ def compare_columns(
         "status": "PASS" if passed else "FAIL"
     }
 
-
-
-
 def validate_metrics(df):
 
     results = []
-
 
     results.append(
         compare_columns(
@@ -53,7 +49,6 @@ def validate_metrics(df):
             "excel_new_actual"
         )
     )
-
 
     results.append(
         compare_columns(
