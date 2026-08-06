@@ -392,6 +392,5 @@ def plot_forecast(
         "Forecast graph saved:",
         output_file
     )
-
-
+    
     return output_file
