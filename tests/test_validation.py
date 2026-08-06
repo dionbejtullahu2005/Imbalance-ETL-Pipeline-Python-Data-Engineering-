@@ -14,7 +14,6 @@ def test_time_series():
 
     result = validate_time_series(df)
 
-
     assert result["total_rows"] == 720
 
     assert result["row_count_pass"]
