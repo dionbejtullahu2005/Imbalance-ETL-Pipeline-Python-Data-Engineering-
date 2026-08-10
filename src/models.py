@@ -19,10 +19,7 @@ import joblib
 from pathlib import Path
 
 
-# ==========================================================
 # MODEL DIRECTORY
-# ==========================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_DIR = (
@@ -39,10 +36,7 @@ MODEL_DIR.mkdir(
 )
 
 
-# ==========================================================
 # FEATURES
-# ==========================================================
-
 FEATURE_COLUMNS = [
 
     "lag1",
@@ -70,10 +64,7 @@ FEATURE_COLUMNS = [
 ]
 
 
-# ==========================================================
 # MODELS
-# ==========================================================
-
 MODELS = {
 
     "Linear Regression":
@@ -93,10 +84,7 @@ MODELS = {
 }
 
 
-# ==========================================================
 # MODEL EVALUATION
-# ==========================================================
-
 def evaluate_model(
         model,
         X,
@@ -128,39 +116,27 @@ def evaluate_model(
         price_test = price.iloc[test_index]
 
 
-        # --------------------------------------------------
         # TRAIN
-        # --------------------------------------------------
-
         model.fit(
             X_train,
             y_train
         )
 
 
-        # --------------------------------------------------
         # PREDICTION
-        # --------------------------------------------------
-
         prediction = model.predict(
             X_test
         )
 
 
-        # --------------------------------------------------
         # MAE
-        # --------------------------------------------------
-
         mae = mean_absolute_error(
             y_test,
             prediction
         )
 
 
-        # --------------------------------------------------
         # MAPE
-        # --------------------------------------------------
-
         mape = (
             mean_absolute_percentage_error(
                 y_test,
@@ -170,11 +146,7 @@ def evaluate_model(
             100
         )
 
-
-        # --------------------------------------------------
         # ERROR IN MWh
-        # --------------------------------------------------
-
         absolute_error = (
             y_test.reset_index(drop=True)
             -
@@ -184,37 +156,22 @@ def evaluate_model(
         ).abs()
 
 
-        # --------------------------------------------------
         # COST OF ERROR
-        #
-        # € = absolute error MWh
-        #      × imbalance price €/MWh
-        # --------------------------------------------------
-
         error_cost = (
             absolute_error
             *
             price_test.reset_index(drop=True).abs()
         )
 
-
-        # --------------------------------------------------
         # AVERAGE COST PER HOUR
-        # --------------------------------------------------
-
         average_error_cost = (
             error_cost.mean()
         )
 
-
-        # --------------------------------------------------
         # TOTAL COST
-        # --------------------------------------------------
-
         total_error_cost = (
             error_cost.sum()
         )
-
 
         mae_scores.append(
             mae
@@ -232,7 +189,6 @@ def evaluate_model(
             total_error_cost
         )
 
-
     return (
         sum(mae_scores) / len(mae_scores),
         sum(mape_scores) / len(mape_scores),
@@ -240,22 +196,14 @@ def evaluate_model(
         sum(total_cost_scores)
     )
 
-
-# ==========================================================
 # MODEL COMPARISON
-# ==========================================================
-
 def compare_models(
         df_features
 ):
 
     df = df_features.copy()
 
-
-    # ------------------------------------------------------
     # VALIDATE REQUIRED COLUMNS
-    # ------------------------------------------------------
-
     required_columns = (
         FEATURE_COLUMNS
         +
@@ -265,13 +213,11 @@ def compare_models(
         ]
     )
 
-
     missing_columns = [
         column
         for column in required_columns
         if column not in df.columns
     ]
-
 
     if missing_columns:
 
@@ -281,15 +227,10 @@ def compare_models(
             ", ".join(missing_columns)
         )
 
-
-    # ------------------------------------------------------
     # REMOVE INVALID ROWS
-    # ------------------------------------------------------
-
     df = df.dropna(
         subset=required_columns
     )
-
 
     X = df[
         FEATURE_COLUMNS
@@ -303,14 +244,9 @@ def compare_models(
         "price"
     ]
 
-
     results = []
 
-
-    # ------------------------------------------------------
     # EVALUATE MODELS
-    # ------------------------------------------------------
-
     for name, model in MODELS.items():
 
         (
@@ -324,7 +260,6 @@ def compare_models(
             y,
             price
         )
-
 
         results.append(
             {
@@ -340,30 +275,20 @@ def compare_models(
             }
         )
 
-
     result_df = pd.DataFrame(
         results
     )
 
-
-    # ------------------------------------------------------
     # SORT BY BUSINESS COST
-    # ------------------------------------------------------
-
     result_df = result_df.sort_values(
         "Total Error Cost (€)"
     ).reset_index(
         drop=True
     )
 
-
     return result_df
 
-
-# ==========================================================
 # TRAIN FINAL MODEL
-# ==========================================================
-
 def train_final_model(
         df_features
 ):
@@ -379,7 +304,6 @@ def train_final_model(
             "new_actual"
         ]
     )
-
 
     X = df[
         FEATURE_COLUMNS
@@ -405,12 +329,10 @@ def train_final_model(
         "linear_regression_final.pkl"
     )
 
-
     joblib.dump(
         model,
         model_path
     )
-
 
     return (
         model,
@@ -457,18 +379,14 @@ def train_explainable_models(df_features):
 
     }
 
-
     trained_models = {}
 
-
     for name, model in models.items():
-
 
         model.fit(
             X,
             y
         )
-
 
         model_path = (
             MODEL_DIR
@@ -476,15 +394,12 @@ def train_explainable_models(df_features):
             f"{name}.pkl"
         )
 
-
         joblib.dump(
             model,
             model_path
         )
 
-
         trained_models[name] = model
-
 
         print(
             f"{name} saved:",
@@ -494,11 +409,7 @@ def train_explainable_models(df_features):
 
     return trained_models
 
-
-# ==========================================================
 # LINEAR REGRESSION PREDICTION
-# ==========================================================
-
 def train_linear_prediction(
         df_features
 ):
@@ -525,10 +436,7 @@ def train_linear_prediction(
     ]
 
 
-    # ------------------------------------------------------
     # 80% TRAIN / 20% TEST
-    # ------------------------------------------------------
-
     split = int(
         len(model_df) * 0.8
     )
@@ -550,11 +458,9 @@ def train_linear_prediction(
         y_train
     )
 
-
     prediction = model.predict(
         X_test
     )
-
 
     df_test = model_df.iloc[
         split:
@@ -565,21 +471,14 @@ def train_linear_prediction(
         "linear_prediction"
     ] = prediction
 
-
-    # ------------------------------------------------------
     # MAE
-    # ------------------------------------------------------
-
     mae = mean_absolute_error(
         y_test,
         prediction
     )
 
 
-    # ------------------------------------------------------
     # MAPE
-    # ------------------------------------------------------
-
     mape = (
         mean_absolute_percentage_error(
             y_test,
@@ -589,11 +488,7 @@ def train_linear_prediction(
         100
     )
 
-
-    # ------------------------------------------------------
     # ERROR COST
-    # ------------------------------------------------------
-
     absolute_error = (
         y_test.reset_index(drop=True)
         -
@@ -606,13 +501,11 @@ def train_linear_prediction(
         .reset_index(drop=True)
     )
 
-
     error_cost = (
         absolute_error
         *
         price_test.abs()
     )
-
 
     average_error_cost = (
         error_cost.mean()
@@ -622,7 +515,6 @@ def train_linear_prediction(
     total_error_cost = (
         error_cost.sum()
     )
-
 
     result = pd.DataFrame(
         {
@@ -648,7 +540,6 @@ def train_linear_prediction(
         }
     )
 
-
     joblib.dump(
         model,
         MODEL_DIR
@@ -656,18 +547,13 @@ def train_linear_prediction(
         "linear_regression.pkl"
     )
 
-
     return (
         result,
         df_test,
         model
     )
 
-
-# ==========================================================
 # LOAD MODEL
-# ==========================================================
-
 def load_linear_model():
 
     model = joblib.load(
@@ -705,12 +591,10 @@ def calculate_prediction_interval(
         (1-confidence)/2
     )
 
-
     upper_error = np.quantile(
         errors,
         1-(1-confidence)/2
     )
-
 
     return (
         lower_error,
