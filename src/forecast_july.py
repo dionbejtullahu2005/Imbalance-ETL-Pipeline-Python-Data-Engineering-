@@ -8,10 +8,7 @@ from src.features import create_features
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
-# =====================================================
 # PATHS
-# =====================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -75,11 +72,7 @@ FEATURE_COLUMNS = [
 
 
 
-# =====================================================
-# CREATE FUTURE DATES
-# =====================================================
-
-
+# CREATE FUTURE DATEs
 def create_future_dates(
         year,
         month
@@ -133,11 +126,7 @@ def create_future_dates(
 
 
 
-# =====================================================
 # FORECAST
-# =====================================================
-
-
 def forecast_month(
         history_df,
         year,
