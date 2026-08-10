@@ -8,10 +8,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from src.features import create_features
 
 
-# ============================================================
 # PATHS
-# ============================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_PATH = (
@@ -37,11 +34,7 @@ OUTPUT_DIR.mkdir(
     exist_ok=True
 )
 
-
-# ============================================================
 # TIMEZONE
-# ============================================================
-
 try:
     TIMEZONE = ZoneInfo("Europe/Pristina")
 
@@ -49,10 +42,7 @@ except ZoneInfoNotFoundError:
     TIMEZONE = ZoneInfo("Europe/Tirane")
 
 
-# ============================================================
 # MODEL FEATURES
-# ============================================================
-
 FEATURE_COLUMNS = [
 
     "lag1",
@@ -81,10 +71,7 @@ FEATURE_COLUMNS = [
 ]
 
 
-# ============================================================
 # CREATE FUTURE DATES
-# ============================================================
-
 def create_future_dates(
     year,
     month
@@ -147,9 +134,7 @@ def create_future_dates(
     return future
 
 
-# ============================================================
 # FORECAST MONTH
-# ============================================================
 
 def forecast_month(
     history_df,
@@ -163,9 +148,7 @@ def forecast_month(
         f"FORECAST {year}-{month:02d}"
     )
 
-    # ========================================================
     # EXPECTED HISTORICAL FORECAST ERROR
-    # ========================================================
 
     expected_error_mwh = np.mean(
         np.abs(
@@ -173,19 +156,7 @@ def forecast_month(
         )
     )
 
-    # ========================================================
     # DYNAMIC HISTORICAL IMBALANCE PRICE
-    #
-    # Për çdo orë të ditës:
-    #
-    # 01 -> mesatarja historike e orës 01
-    # 02 -> mesatarja historike e orës 02
-    # ...
-    # 24 -> mesatarja historike e orës 24
-    #
-    # Kjo e bën çmimin dinamik sipas orës.
-    # ========================================================
-
     hourly_price = (
         history_df
         .groupby("hour")["price"]
@@ -204,10 +175,7 @@ def forecast_month(
 
         average_imbalance_price = 0.0
 
-    # ========================================================
-    # ERROR DISTRIBUTION
-    # ========================================================
-
+    # ERROR DISTRIBUTIOn
     lower_error = np.percentile(
         error_distribution,
         5
@@ -218,27 +186,18 @@ def forecast_month(
         95
     )
 
-    # ========================================================
     # LOAD MODEL
-    # ========================================================
-
     model = joblib.load(
         MODEL_PATH
     )
 
-    # ========================================================
     # CREATE FUTURE DATES
-    # ========================================================
-
     future = create_future_dates(
         year,
         month
     )
 
-    # ========================================================
     # MERGE WEATHER
-    # ========================================================
-
     future = future.merge(
         weather_df,
         on="datetime",
@@ -258,10 +217,7 @@ def forecast_month(
             "do not have weather forecast data."
         )
 
-    # ========================================================
     # PREDICTION LISTS
-    # ========================================================
-
     predictions = []
 
     lower_predictions = []
@@ -270,10 +226,7 @@ def forecast_month(
 
     estimated_prices = []
 
-    # ========================================================
     # HISTORY FOR RECURSIVE FORECAST
-    # ========================================================
-
     history = history_df[
         [
             "datetime",
@@ -286,20 +239,14 @@ def forecast_month(
         "datetime"
     )
 
-    # ========================================================
     # HOURLY FORECAST
-    # ========================================================
-
     for _, row in future.iterrows():
 
         current_time = (
             row["datetime"]
         )
 
-        # ----------------------------------------------------
         # Add current forecast timestamp
-        # ----------------------------------------------------
-
         temp = pd.concat(
             [
                 history,
@@ -323,10 +270,7 @@ def forecast_month(
             ignore_index=True
         )
 
-        # ----------------------------------------------------
         # Create features
-        # ----------------------------------------------------
-
         features = create_features(
             temp
         )
@@ -336,10 +280,7 @@ def forecast_month(
             .iloc[-1]
         )
 
-        # ----------------------------------------------------
         # Prepare ML input
-        # ----------------------------------------------------
-
         X = pd.DataFrame(
             [
                 current[
@@ -348,29 +289,20 @@ def forecast_month(
             ]
         )
 
-        # ----------------------------------------------------
         # Fill missing values
-        # ----------------------------------------------------
-
         X = X.fillna(
             history_df[
                 "new_actual"
             ].median()
         )
 
-        # ----------------------------------------------------
         # ML prediction
-        # ----------------------------------------------------
-
         ml_prediction = (
             model
             .predict(X)[0]
         )
 
-        # ----------------------------------------------------
         # Weekly seasonal pattern
-        # ----------------------------------------------------
-
         seasonal_prediction = (
             current["lag168"]
         )
@@ -391,10 +323,7 @@ def forecast_month(
                 ml_prediction
             )
 
-        # ----------------------------------------------------
         # Hybrid prediction
-        # ----------------------------------------------------
-
         final_prediction = (
             0.7
             *
@@ -405,10 +334,7 @@ def forecast_month(
             ml_prediction
         )
 
-        # ----------------------------------------------------
         # Prediction interval
-        # ----------------------------------------------------
-
         lower_prediction = (
             final_prediction
             +
@@ -421,10 +347,7 @@ def forecast_month(
             upper_error
         )
 
-        # ----------------------------------------------------
         # Save predictions
-        # ----------------------------------------------------
-
         predictions.append(
             final_prediction
         )
@@ -437,12 +360,7 @@ def forecast_month(
             upper_prediction
         )
 
-        # ----------------------------------------------------
         # Dynamic imbalance price
-        #
-        # row["hour"] është 1-24
-        # ----------------------------------------------------
-
         estimated_price = (
             hourly_price.get(
                 row["hour"],
@@ -462,13 +380,7 @@ def forecast_month(
             estimated_price
         )
 
-        # ----------------------------------------------------
         # Add forecast to history
-        #
-        # Kjo është e nevojshme për lag features
-        # e orës pasuese.
-        # ----------------------------------------------------
-
         history = pd.concat(
             [
                 history,
@@ -492,10 +404,7 @@ def forecast_month(
             ignore_index=True
         )
 
-    # ========================================================
     # SAVE FORECAST RESULTS
-    # ========================================================
-
     future["predicted_MWh"] = (
         predictions
     )
@@ -512,26 +421,17 @@ def forecast_month(
         "90%"
     )
 
-    # ========================================================
     # EXPECTED ERROR
-    # ========================================================
-
     future["expected_error_MWh"] = (
         expected_error_mwh
     )
 
-    # ========================================================
     # DYNAMIC IMBALANCE PRICE
-    # ========================================================
-
     future[
         "estimated_imbalance_price_EUR_MWh"
     ] = estimated_prices
 
-    # ========================================================
     # HOURLY ESTIMATED ERROR COST
-    # ========================================================
-
     future[
         "estimated_error_cost_EUR"
     ] = (
@@ -544,20 +444,14 @@ def forecast_month(
         ]
     )
 
-    # ========================================================
     # TOTAL EXPECTED ERROR COST
-    # ========================================================
-
     total_expected_error_cost = (
         future[
             "estimated_error_cost_EUR"
         ].sum()
     )
 
-    # ========================================================
     # SAVE CSV
-    # ========================================================
-
     output_file = (
         OUTPUT_DIR
         /
@@ -569,10 +463,7 @@ def forecast_month(
         index=False
     )
 
-    # ========================================================
     # FINAL OUTPUT
-    # ========================================================
-
     print(
         f"Estimated Total Forecast Error Cost: "
         f"{total_expected_error_cost:.2f} EUR"
