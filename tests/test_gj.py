@@ -18,7 +18,6 @@ def test_gj_calculation():
 
     assert "Python_Value" in result.columns
 
-
     assert result.loc[
         result["Nr"] == 1,
         "Python_Value"
