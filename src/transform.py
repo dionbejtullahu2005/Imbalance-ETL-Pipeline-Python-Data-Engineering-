@@ -99,7 +99,6 @@ def transform(df):
 
     # DST AWARE DATETIME
     # Kosovo timezone
-    # Excel hour: 1-24
     df["datetime"] = (
         pd.to_datetime(
             df["date"].astype(str)
