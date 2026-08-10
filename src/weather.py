@@ -8,13 +8,7 @@ LONGITUDE = 21.1655
 TIMEZONE = "Europe/Tirane"
 
 
-# ==========================================================
 # HISTORICAL WEATHER
-#
-# Përdoret për muajt që kanë kaluar dhe për të cilët
-# ekzistojnë temperatura reale.
-# ==========================================================
-
 def get_historical_temperature(
     start_date,
     end_date
@@ -46,7 +40,6 @@ def get_historical_temperature(
 
     data = response.json()
 
-
     weather = pd.DataFrame(
         {
             "datetime":
@@ -58,7 +51,6 @@ def get_historical_temperature(
                 data["hourly"]["temperature_2m"]
         }
     )
-
 
     # timezone-aware
     weather["datetime"] = (
@@ -72,13 +64,7 @@ def get_historical_temperature(
     return weather
 
 
-# ==========================================================
 # FUTURE WEATHER FORECAST
-#
-# Përdoret për muajt që ende nuk kanë ndodhur.
-# Merr parashikimin e motit.
-# ==========================================================
-
 def get_forecast_temperature():
 
     url = (
@@ -119,13 +105,11 @@ def get_forecast_temperature():
         }
     )
 
-
     weather["datetime"] = (
         weather["datetime"]
         .dt.tz_localize(
             TIMEZONE
         )
     )
-
 
     return weather
