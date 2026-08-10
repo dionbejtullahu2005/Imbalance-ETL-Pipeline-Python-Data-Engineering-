@@ -317,9 +317,9 @@ def plot_forecasting_comparison(
 
     plt.close()
 
-# JULY FORECAST
  # FORECAST REPORT
 def plot_forecast(
+        history_df,
         forecast_df,
         year,
         month
@@ -392,5 +392,59 @@ def plot_forecast(
         "Forecast graph saved:",
         output_file
     )
-    
+
+
+    return output_file
+
+def plot_nomination_strategy_cost(strategy_df):
+
+    plt.figure(
+        figsize=(10, 5)
+    )
+
+    plt.bar(
+        strategy_df["Strategy"],
+        strategy_df["Total Cost (eur)"]
+    )
+
+    plt.title(
+        "Nomination Strategy Cost Comparison"
+    )
+
+    plt.xlabel(
+        "Nomination Strategy"
+    )
+
+    plt.ylabel(
+        "Total Error Cost (€)"
+    )
+
+    plt.xticks(
+        rotation=30
+    )
+
+    plt.grid(
+        axis="y"
+    )
+
+    output_file = (
+        REPORT_DIR
+        /
+        "nomination_strategy_cost.png"
+    )
+
+    plt.savefig(
+        output_file,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+
+    print(
+        "Nomination strategy graph saved:",
+        output_file
+    )
+
+
     return output_file

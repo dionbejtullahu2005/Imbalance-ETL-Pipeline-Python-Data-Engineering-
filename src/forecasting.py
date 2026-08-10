@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def rolling_average_prediction(df, window=3):
 
     df = df.copy()
@@ -22,7 +21,6 @@ def calculate_rolling_metrics(df):
             "rolling_prediction"
         ]
     )
-
 
     mae = (
         abs(

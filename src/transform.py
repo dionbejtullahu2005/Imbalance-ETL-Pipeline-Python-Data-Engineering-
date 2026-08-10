@@ -50,7 +50,6 @@ def clean_columns(df):
             "excel_payment"
     }
 
-
     df = df.rename(
         columns=column_map
     )
@@ -91,19 +90,16 @@ def calculate_metrics(df):
         df["price"]
     )
 
-
     return df
 
 def transform(df):
 
     df = clean_columns(df)
-
     df = calculate_metrics(df)
 
     # DST AWARE DATETIME
     # Kosovo timezone
     # Excel hour: 1-24
-
     df["datetime"] = (
         pd.to_datetime(
             df["date"].astype(str)

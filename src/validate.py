@@ -21,16 +21,13 @@ def compare_columns(
         df[excel_col]
     ).abs()
 
-
     max_difference = (
         difference.max()
     )
 
-
     passed = (
         max_difference <= tolerance
     )
-
 
     return {
         "column": python_col,
@@ -58,7 +55,6 @@ def validate_metrics(df):
         )
     )
 
-
     results.append(
         compare_columns(
             df,
@@ -67,12 +63,7 @@ def validate_metrics(df):
         )
     )
 
-
     return pd.DataFrame(results)
-
-
-
-
 
 def expected_hours_for_date(date_value):
 
@@ -82,13 +73,11 @@ def expected_hours_for_date(date_value):
         TIMEZONE
     )
 
-
     end = (
         start
         +
         pd.Timedelta(days=1)
     )
-
 
     return len(
         pd.date_range(
@@ -99,84 +88,54 @@ def expected_hours_for_date(date_value):
         )
     )
 
-
-
-
-
 def validate_time_series(df):
 
     results = {}
-
     df = df.copy()
 
-
-
-    # ==================================
     # Përdor datetime nga transform.py
-    # ==================================
-
     if "datetime" not in df.columns:
 
         raise ValueError(
             "datetime column missing. Run transform() first."
         )
 
-
-
     df = df.sort_values(
         "datetime"
     )
 
-
-
     results["total_rows"] = len(df)
-
-
 
     results["start_date"] = str(
         df["date"].min()
     )
 
-
     results["end_date"] = str(
         df["date"].max()
     )
-
 
     results["days"] = (
         df["date"].nunique()
     )
 
-
-
-    # ==================================
     # Kontrolli DST për çdo ditë
-    # ==================================
-
     hours_per_day = (
         df
         .groupby("date")["hour"]
         .count()
     )
 
-
     results["hours_per_day"] = (
         hours_per_day.to_dict()
     )
 
-
-
     invalid_days = {}
 
-
-
     for day, count in hours_per_day.items():
-
 
         expected = (
             expected_hours_for_date(day)
         )
-
 
         if count != expected:
 
@@ -185,37 +144,23 @@ def validate_time_series(df):
                 "expected": expected,
 
                 "found": int(count)
-
             }
-
-
 
     results["invalid_days"] = (
         invalid_days
     )
 
-
     results["hours_complete"] = (
         len(invalid_days) == 0
     )
 
-
-
-    # ==================================
     # Renditja kohore
-    # ==================================
-
     results["chronological_order"] = (
         df["datetime"]
         .is_monotonic_increasing
     )
 
-
-
-    # ==================================
     # Orët që mungojnë
-    # ==================================
-
     full_range = pd.date_range(
 
         start=df["datetime"].min(),
@@ -226,16 +171,12 @@ def validate_time_series(df):
 
     )
 
-
-
     missing_hours = (
         full_range
         .difference(
             df["datetime"]
         )
     )
-
-
 
     results["missing_hours"] = (
 
@@ -247,17 +188,11 @@ def validate_time_series(df):
 
     )
 
-
     results["missing_hours_pass"] = (
         len(missing_hours) == 0
     )
 
-
-
-    # ==================================
     # Dublikate
-    # ==================================
-
     duplicates = (
         df
         .duplicated(
@@ -269,16 +204,12 @@ def validate_time_series(df):
         .sum()
     )
 
-
     results["duplicates"] = int(
         duplicates
     )
 
-
     results["duplicates_pass"] = (
         duplicates == 0
     )
-
-
 
     return results
