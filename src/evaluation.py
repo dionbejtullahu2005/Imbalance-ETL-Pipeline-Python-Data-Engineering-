@@ -79,10 +79,7 @@ def evaluate_timeseries_model(
         )
 
 
-        # ==========================
         # ERROR DISTRIBUTION
-        # ==========================
-
         fold_errors = (
             y_test.reset_index(drop=True)
             -
@@ -140,10 +137,7 @@ def evaluate_timeseries_model(
     )
 
 
-    # ==========================
     # 90% CONFIDENCE INTERVAL
-    # ==========================
-
     lower_error = np.percentile(
         error_array,
         5
