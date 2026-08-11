@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 # PATHS
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 MODEL_PATH = (
     BASE_DIR
     /
@@ -41,8 +40,6 @@ try:
 
 except ZoneInfoNotFoundError:
     TIMEZONE = ZoneInfo("Europe/Tirane")
-
-
 
 FEATURE_COLUMNS = [
 
