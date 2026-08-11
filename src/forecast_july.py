@@ -7,7 +7,6 @@ from zoneinfo import ZoneInfo
 from src.features import create_features
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-
 # PATHS
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,7 +20,6 @@ MODEL_PATH = (
     /
     "linear_regression_final.pkl"
 )
-
 
 OUTPUT_DIR = (
     BASE_DIR
