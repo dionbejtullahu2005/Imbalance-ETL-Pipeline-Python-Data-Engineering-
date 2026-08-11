@@ -65,8 +65,6 @@ FEATURE_COLUMNS = [
     "is_weekend"
 ]
 
-
-
 # CREATE FUTURE DATEs
 def create_future_dates(
         year,
