@@ -64,10 +64,7 @@ def calibrate_conformal_interval(
         )
 
 
-    # ======================================================
     # GLOBAL CONFORMAL RADIUS
-    # ======================================================
-
     absolute_residuals = (
         residual_df[
             "absolute_residual"
@@ -109,10 +106,7 @@ def calibrate_conformal_interval(
     )
 
 
-    # ======================================================
     # EXPECTED ERROR
-    # ======================================================
-
     expected_error_mwh = float(
         np.mean(
             absolute_residuals
@@ -133,10 +127,7 @@ def calibrate_conformal_interval(
     )
 
 
-    # ======================================================
     # HOURLY RADII
-    # ======================================================
-
     hourly_radii = {}
 
     hourly_stats = []
@@ -222,10 +213,7 @@ def calibrate_conformal_interval(
     )
 
 
-    # ======================================================
     # HISTORICAL CONDITIONAL COVERAGE
-    # ======================================================
-
     residual_df[
         "radius"
     ] = (
@@ -259,10 +247,7 @@ def calibrate_conformal_interval(
     )
 
 
-    # ======================================================
     # PRINT RESULTS
-    # ======================================================
-
     print()
     print("=" * 70)
     print(
