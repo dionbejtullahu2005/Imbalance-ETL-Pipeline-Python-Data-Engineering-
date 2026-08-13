@@ -96,18 +96,12 @@ def transform(df):
 
     df = df.copy()
 
-    # ==========================================================
     # RENAME
-    # ==========================================================
-
     df = df.rename(
         columns=COLUMN_MAPPING
     )
 
-    # ==========================================================
     # DATETIME
-    # ==========================================================
-
     df["date"] = pd.to_datetime(
         df["date"],
         errors="coerce"
@@ -128,10 +122,7 @@ def transform(df):
         )
     )
 
-    # ==========================================================
     # NUMERIC COLUMNS
-    # ==========================================================
-
     numeric_columns = [
 
         "consumption_kwh",
@@ -177,10 +168,7 @@ def transform(df):
                 errors="coerce"
             )
 
-    # ==========================================================
     # SIGUROHEMI VLERAT E MUNGËSUARA
-    # ==========================================================
-
     df["uncover_sell"] = (
         df["uncover_sell"]
         .fillna(0)
@@ -222,10 +210,7 @@ def transform(df):
             "imbalance_formula contains missing values."
         )
 
-    # ==========================================================
     # RILLLOGARITJA E IMBALANC
-    # ==========================================================
-
     base_imbalance = (
         df["plan_mwh"]
         - df["production_mwh"]
@@ -246,19 +231,15 @@ def transform(df):
         + uncover_adjustment,
         base_imbalance,
     )
-    # ==========================================================
+    
     # RILLLOGARITJA E TOTAL EURO
-    # ==========================================================
-
     df["total_euro_calculated"] = (
         df["imbalance_calculated"]
         *
         df["price"]
     )
 
-    # ==========================================================
     # PLAN DEVIATION
-    # ==========================================================
 
     df["plan_dev_calculated"] = (
         df["plan_mwh"]
@@ -267,19 +248,13 @@ def transform(df):
         - df["production_mwh"]
     )
 
-    # ==========================================================
     # ABSOLUTE ERROR
-    # ==========================================================
-
     df["mape_calculated"] = (
         df["plan_dev_calculated"]
         .abs()
     )
 
-    # ==========================================================
     # MAPE %
-    # ==========================================================
-
     df["mape_percentage_calculated"] = np.where(
 
         df["consumption_mwh"] != 0,
@@ -293,10 +268,7 @@ def transform(df):
         np.nan
     )
 
-    # ==========================================================
     # ALPEX IMBALANCE
-    # ==========================================================
-
     df["alpex_imbalance_calculated"] = (
 
         df["imbalance_calculated"]
@@ -308,9 +280,7 @@ def transform(df):
         )
     )
 
-    # ==========================================================
     # ALPEX PRICE DIFFERENCE
-    # ==========================================================
 
     df["alpex_imbalance_price_calculated"] = (
         df["alpex"]
@@ -318,20 +288,14 @@ def transform(df):
         df["price"]
     )
 
-    # ==========================================================
     # PERCENT DEVIATION
-    # Compatibility with reporting/anomaly modules
-    # ==========================================================
 
     df["percent_delta"] = (
         df["mape_percentage"]
         * 100
     )
 
-    # ==========================================================
     # SORT
-    # ==========================================================
-
     df = df.sort_values(
         "datetime"
     ).reset_index(drop=True)
