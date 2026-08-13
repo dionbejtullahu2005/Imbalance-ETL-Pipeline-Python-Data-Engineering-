@@ -9,9 +9,7 @@ from sklearn.metrics import (
 )
 
 
-# ==========================================================
 # PATHS
-# ==========================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -36,10 +34,7 @@ OUTPUT_PATH = (
 )
 
 
-# ==========================================================
 # FEATURES
-# ==========================================================
-
 FEATURE_COLUMNS = [
 
     "lag1",
@@ -67,10 +62,7 @@ FEATURE_COLUMNS = [
 ]
 
 
-# ==========================================================
 # LOAD FORECAST
-# ==========================================================
-
 forecast = pd.read_csv(
     FORECAST_PATH
 )
@@ -84,10 +76,7 @@ if forecast["datetime"].duplicated().any():
     raise ValueError("Forecast contains duplicate timestamps")
 
 
-# ==========================================================
 # LOAD REAL JULY DATA
-# ==========================================================
-
 actual = pd.read_excel(
     ACTUAL_PATH,
     sheet_name="imbalanc h"
@@ -115,10 +104,7 @@ actual = actual[
 ].copy()
 
 
-# ==========================================================
 # DATETIME
-# ==========================================================
-
 actual["Date"] = pd.to_datetime(
     actual["Date"],
     dayfirst=True,
@@ -140,9 +126,7 @@ actual["datetime"] = (
 )
 
 
-# ==========================================================
 # REAL VALUES
-# ==========================================================
 
 actual["actual_imbalance_MWh"] = pd.to_numeric(
     actual["Imbalanc"],
@@ -158,10 +142,7 @@ if actual["datetime"].duplicated().any():
     raise ValueError("Actual data contains duplicate timestamps")
 
 
-# ==========================================================
 # MERGE FORECAST + ACTUAL
-# ==========================================================
-
 backtest = forecast.merge(
     actual[
         [
@@ -180,10 +161,7 @@ actual_timestamps = pd.DatetimeIndex(actual["datetime"].dropna().unique())
 missing_actual = expected.difference(actual_timestamps)
 month_status = "COMPLETE_MONTH" if len(missing_actual) == 0 else "PARTIAL_MONTH"
 
-# ==========================================================
 # CHECK MODEL PREDICTION COLUMNS
-# ==========================================================
-
 required_prediction_columns = [
     "linear_prediction_MWh",
     "random_forest_prediction_MWh",
@@ -205,10 +183,7 @@ if missing_prediction_columns:
     )
 
 
-# ==========================================================
 # HYBRID
-# ==========================================================
-
 if "predicted_imbalance_MWh" in backtest.columns:
 
     backtest[
@@ -226,9 +201,7 @@ else:
     ]
 
 
-# ==========================================================
 # SEASONAL
-# ==========================================================
 
 if "seasonal_prediction_MWh" not in backtest.columns:
 
@@ -237,9 +210,7 @@ if "seasonal_prediction_MWh" not in backtest.columns:
     ] = np.nan
 
 
-# ==========================================================
 # HELPER FUNCTION
-# ==========================================================
 
 def evaluate_prediction(
     df,
@@ -359,10 +330,7 @@ def evaluate_prediction(
     }
 
 
-# ==========================================================
 # EVALUATE ALL MODELS
-# ==========================================================
-
 results = []
 
 model_columns = [
@@ -414,10 +382,7 @@ result_df = pd.DataFrame(
 )
 
 
-# ==========================================================
 # SORT BY BUSINESS COST
-# ==========================================================
-
 if len(result_df) > 0:
 
     result_df = (
@@ -431,9 +396,7 @@ if len(result_df) > 0:
     )
 
 
-# ==========================================================
 # HYBRID INTERVAL COVERAGE
-# ==========================================================
 
 if (
     "lower_bound_MWh"
@@ -483,11 +446,7 @@ else:
 
     coverage = np.nan
 
-
-# ==========================================================
 # PRINT RESULTS
-# ==========================================================
-
 print("\n")
 print("=" * 90)
 print("JULY 2026 MODEL BACKTEST")
@@ -514,10 +473,7 @@ print(
 )
 
 
-# ==========================================================
 # BEST MODEL BY MAE
-# ==========================================================
-
 if len(result_df) > 0:
 
     best_mae = (
@@ -569,10 +525,7 @@ if len(result_df) > 0:
     )
 
 
-# ==========================================================
 # WORST HYBRID HOURS
-# ==========================================================
-
 backtest[
     "hybrid_absolute_error_MWh"
 ] = (
@@ -620,10 +573,7 @@ print(
 )
 
 
-# ==========================================================
 # SAVE
-# ==========================================================
-
 backtest.to_csv(
     OUTPUT_PATH,
     index=False
