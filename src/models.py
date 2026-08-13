@@ -8,6 +8,7 @@ from sklearn.ensemble import (
 )
 
 from sklearn.model_selection import TimeSeriesSplit
+from sklearn.base import clone
 
 from sklearn.metrics import (
     mean_absolute_error,
@@ -15,11 +16,18 @@ from sklearn.metrics import (
 )
 
 import joblib
+import json
+from datetime import datetime, timezone
 
 from pathlib import Path
+from src.features import FEATURE_COLUMNS
+from src.evaluation import recursive_timeseries_residuals
 
 
+# ==========================================================
 # MODEL DIRECTORY
+# ==========================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_DIR = (
@@ -36,35 +44,14 @@ MODEL_DIR.mkdir(
 )
 
 
+# ==========================================================
 # FEATURES
-FEATURE_COLUMNS = [
+# ==========================================================
 
-    "lag1",
-    "lag2",
-    "lag3",
-
-    "lag24",
-    "lag48",
-    "lag168",
-
-    "roll_mean_3",
-    "roll_mean_24",
-    "roll_mean_168",
-
-    "roll_std_3",
-    "roll_std_24",
-
-    "hour_sin",
-    "hour_cos",
-
-    "dayofweek",
-    "is_weekend",
-
-    "temperature"
-]
-
-
+# ==========================================================
 # MODELS
+# ==========================================================
+
 MODELS = {
 
     "Linear Regression":
@@ -107,6 +94,8 @@ def evaluate_model(
 
     for train_index, test_index in tscv.split(X):
 
+        fold_model = clone(model)
+
         X_train = X.iloc[train_index]
         X_test = X.iloc[test_index]
 
@@ -117,24 +106,22 @@ def evaluate_model(
 
 
         # TRAIN
-        model.fit(
+        fold_model.fit(
             X_train,
             y_train
         )
 
 
         # PREDICTION
-        prediction = model.predict(
+        prediction = fold_model.predict(
             X_test
         )
-
 
         # MAE
         mae = mean_absolute_error(
             y_test,
             prediction
         )
-
 
         # MAPE
         mape = (
@@ -173,6 +160,7 @@ def evaluate_model(
             error_cost.sum()
         )
 
+
         mae_scores.append(
             mae
         )
@@ -189,6 +177,7 @@ def evaluate_model(
             total_error_cost
         )
 
+
     return (
         sum(mae_scores) / len(mae_scores),
         sum(mape_scores) / len(mape_scores),
@@ -196,19 +185,17 @@ def evaluate_model(
         sum(total_cost_scores)
     )
 
+
 # MODEL COMPARISON
-def compare_models(
-        df_features
-):
+def compare_models(df_features):
 
     df = df_features.copy()
 
-    # VALIDATE REQUIRED COLUMNS
     required_columns = (
         FEATURE_COLUMNS
         +
         [
-            "new_actual",
+            "imbalance",
             "price"
         ]
     )
@@ -220,58 +207,39 @@ def compare_models(
     ]
 
     if missing_columns:
-
         raise ValueError(
             "Missing columns for model comparison: "
-            +
-            ", ".join(missing_columns)
+            + ", ".join(missing_columns)
         )
 
-    # REMOVE INVALID ROWS
     df = df.dropna(
         subset=required_columns
     )
 
-    X = df[
-        FEATURE_COLUMNS
-    ]
-
-    y = df[
-        "new_actual"
-    ]
-
-    price = df[
-        "price"
-    ]
-
     results = []
 
-    # EVALUATE MODELS
     for name, model in MODELS.items():
 
-        (
-            mae,
-            mape,
-            average_cost,
-            total_cost
-        ) = evaluate_model(
-            model,
-            X,
-            y,
-            price
+        residuals = recursive_timeseries_residuals(model, df_features, splits=5)
+        mae = float(residuals["absolute_residual"].mean())
+        nonzero = residuals["actual"].abs() > 1e-9
+        mape = float(
+            (residuals.loc[nonzero, "absolute_residual"]
+             / residuals.loc[nonzero, "actual"].abs()).mean() * 100
         )
+        prices = df_features[["datetime", "price"]].drop_duplicates("datetime")
+        cost_rows = residuals.merge(prices, on="datetime", how="left", validate="many_to_one")
+        proxy_cost = cost_rows["absolute_residual"] * cost_rows["price"].abs()
+        average_cost = float(proxy_cost.mean())
+        total_cost = float(proxy_cost.sum())
 
         results.append(
             {
                 "Model": name,
-
                 "MAE": mae,
-
                 "MAPE (%)": mape,
-
-                "Avg Error Cost (€)": average_cost,
-
-                "Total Error Cost (€)": total_cost
+                "Avg Error Price Proxy (€)": average_cost,
+                "Total Error Price Proxy (€)": total_cost
             }
         )
 
@@ -279,19 +247,23 @@ def compare_models(
         results
     )
 
-    # SORT BY BUSINESS COST
+    # RENDITJA SIPAS KOSTOS REALE
     result_df = result_df.sort_values(
-        "Total Error Cost (€)"
+        "Total Error Price Proxy (€)"
     ).reset_index(
         drop=True
     )
 
     return result_df
 
+
 # TRAIN FINAL MODEL
 def train_final_model(
-        df_features
+        df_features,
+        model_name="gradient_boosting",
+        trained_model=None
 ):
+    """Persist the explicitly selected production model and its metadata."""
 
     df = df_features.copy()
 
@@ -301,7 +273,7 @@ def train_final_model(
         FEATURE_COLUMNS
         +
         [
-            "new_actual"
+            "imbalance"
         ]
     )
 
@@ -310,28 +282,48 @@ def train_final_model(
     ]
 
     y = df[
-        "new_actual"
+        "imbalance"
     ]
 
-
-    model = LinearRegression()
-
-
-    model.fit(
-        X,
-        y
-    )
-
+    factories = {
+        "linear_regression": lambda: LinearRegression(),
+        "random_forest": lambda: RandomForestRegressor(
+            n_estimators=100, random_state=42
+        ),
+        "gradient_boosting": lambda: GradientBoostingRegressor(
+            random_state=42
+        ),
+    }
+    if model_name not in factories:
+        raise ValueError(f"Unsupported final model: {model_name}")
+    model = trained_model if trained_model is not None else factories[model_name]()
+    if trained_model is None:
+        model.fit(X, y)
 
     model_path = (
         MODEL_DIR
         /
-        "linear_regression_final.pkl"
+        "final_model.pkl"
     )
 
     joblib.dump(
         model,
         model_path
+    )
+
+    metadata = {
+        "model_name": model_name,
+        "model_class": type(model).__name__,
+        "feature_columns": FEATURE_COLUMNS,
+        "training_start": str(df["datetime"].min()) if "datetime" in df else None,
+        "training_end": str(df["datetime"].max()) if "datetime" in df else None,
+        "training_rows": int(len(df)),
+        "random_seed": 42,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "parameters": model.get_params(),
+    }
+    (MODEL_DIR / "final_model_metadata.json").write_text(
+        json.dumps(metadata, indent=2, default=str), encoding="utf-8"
     )
 
     return (
@@ -343,27 +335,27 @@ def train_explainable_models(df_features):
 
     df = df_features.copy()
 
-
     df = df.dropna(
         subset=
         FEATURE_COLUMNS
         +
         [
-            "new_actual"
+            "imbalance"
         ]
     )
-
 
     X = df[
         FEATURE_COLUMNS
     ]
 
     y = df[
-        "new_actual"
+        "imbalance"
     ]
 
-
     models = {
+
+        "linear_regression":
+            LinearRegression(),
 
         "random_forest":
             RandomForestRegressor(
@@ -382,6 +374,7 @@ def train_explainable_models(df_features):
     trained_models = {}
 
     for name, model in models.items():
+
 
         model.fit(
             X,
@@ -406,8 +399,8 @@ def train_explainable_models(df_features):
             model_path
         )
 
-
     return trained_models
+
 
 # LINEAR REGRESSION PREDICTION
 def train_linear_prediction(
@@ -422,7 +415,7 @@ def train_linear_prediction(
         FEATURE_COLUMNS
         +
         [
-            "new_actual"
+            "imbalance"
         ]
     )
 
@@ -432,7 +425,7 @@ def train_linear_prediction(
     ]
 
     y = model_df[
-        "new_actual"
+        "imbalance"
     ]
 
 
@@ -458,9 +451,11 @@ def train_linear_prediction(
         y_train
     )
 
+
     prediction = model.predict(
         X_test
     )
+
 
     df_test = model_df.iloc[
         split:
@@ -470,6 +465,7 @@ def train_linear_prediction(
     df_test[
         "linear_prediction"
     ] = prediction
+
 
     # MAE
     mae = mean_absolute_error(
@@ -488,6 +484,7 @@ def train_linear_prediction(
         100
     )
 
+
     # ERROR COST
     absolute_error = (
         y_test.reset_index(drop=True)
@@ -501,11 +498,13 @@ def train_linear_prediction(
         .reset_index(drop=True)
     )
 
+
     error_cost = (
         absolute_error
         *
         price_test.abs()
     )
+
 
     average_error_cost = (
         error_cost.mean()
@@ -515,6 +514,7 @@ def train_linear_prediction(
     total_error_cost = (
         error_cost.sum()
     )
+
 
     result = pd.DataFrame(
         {
@@ -540,6 +540,7 @@ def train_linear_prediction(
         }
     )
 
+
     joblib.dump(
         model,
         MODEL_DIR
@@ -547,11 +548,13 @@ def train_linear_prediction(
         "linear_regression.pkl"
     )
 
+
     return (
         result,
         df_test,
         model
     )
+
 
 # LOAD MODEL
 def load_linear_model():
@@ -591,10 +594,12 @@ def calculate_prediction_interval(
         (1-confidence)/2
     )
 
+
     upper_error = np.quantile(
         errors,
         1-(1-confidence)/2
     )
+
 
     return (
         lower_error,

@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from src.models import FEATURE_COLUMNS
+from src.features import FEATURE_COLUMNS
 
 from pathlib import Path
 

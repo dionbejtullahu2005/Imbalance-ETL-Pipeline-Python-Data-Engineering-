@@ -5,7 +5,7 @@ def rolling_average_prediction(df, window=3):
     df = df.copy()
 
     df["rolling_prediction"] = (
-        df["new_actual"]
+        df["imbalance"]
         .shift(1)
         .rolling(window)
         .mean()
@@ -24,7 +24,7 @@ def calculate_rolling_metrics(df):
 
     mae = (
         abs(
-            df["new_actual"]
+            df["imbalance"]
             -
             df["rolling_prediction"]
         )
@@ -35,12 +35,12 @@ def calculate_rolling_metrics(df):
     mape = (
         abs(
             (
-                df["new_actual"]
+                df["imbalance"]
                 -
                 df["rolling_prediction"]
             )
             /
-            df["new_actual"]
+            df["imbalance"]
         )
         .mean()
         *

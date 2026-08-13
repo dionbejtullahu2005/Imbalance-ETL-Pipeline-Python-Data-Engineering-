@@ -1,83 +1,212 @@
 from pathlib import Path
 import pandas as pd
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-EXCEL_FILE = (
+EXCEL_PATH = (
     BASE_DIR
     / "data"
-    / "Imbalanc_June_2026.xlsx"
+    / "Imbalanc June 2026 (1).xlsx"
 )
 
-def extract_excel():
 
-    """
-    Lexon fletet J dhe GJ
-    """
+def extract_excel(excel_path=None):
+    """Return ``(hourly, summary, prices)`` from a supported workbook."""
+    source_path = Path(excel_path) if excel_path is not None else EXCEL_PATH
+    if not source_path.exists():
+        raise FileNotFoundError(f"Excel workbook not found: {source_path}")
+    workbook = pd.ExcelFile(source_path)
+    required_sheets = {"imbalanc h", "Prices", "summary"}
+    missing_sheets = sorted(required_sheets.difference(workbook.sheet_names))
+    if missing_sheets:
+        raise ValueError("Missing Excel sheets: " + ", ".join(missing_sheets))
 
-    df_j = pd.read_excel(
-        EXCEL_FILE,
-        sheet_name="J",
-        engine="openpyxl"
+    # ==========================================================
+    # HOURLY DATA
+    # ==========================================================
+
+    df = pd.read_excel(
+        source_path,
+        sheet_name="imbalanc h"
     )
 
-
-    df_gj = pd.read_excel(
-        EXCEL_FILE,
-        sheet_name="GJ",
-        header=None,
-        engine="openpyxl"
+    # Normalizo emrat e kolonave
+    df.columns = (
+        df.columns
+        .astype(str)
+        .str.strip()
     )
 
+    # ==========================================================
+    # MBAN VETËM ORËT REALE
+    # ==========================================================
 
-    df_gj = df_gj.iloc[:, [4, 5, 6, 7]]
+    df = df[
+        df["Supplier"].notna()
+        &
+        df["Date"].notna()
+        &
+        df["Hour"].notna()
+    ].copy()
 
-    df_gj.columns = [
-        "Nr. rendor",
-        "Emërtimi - Përshkrimi",
-        "Sasia",
-        "Sqarime"
-    ]
+    # Vetëm EnerCo
+    df = df[
+        df["Supplier"]
+        .astype(str)
+        .str.strip()
+        .eq("EnerCo")
+    ].copy()
 
-    df_gj = df_gj.dropna(
-        subset=["Nr. rendor"]
-    )
+    # ==========================================================
+    # DATA
+    # ==========================================================
 
-
-    df_gj = df_gj[
-        df_gj["Nr. rendor"] != "Nr. rendor"
-    ]
-
-
-    df_gj["Nr. rendor"] = pd.to_numeric(
-        df_gj["Nr. rendor"],
+    df["Date"] = pd.to_datetime(
+        df["Date"],
+        dayfirst=True,
         errors="coerce"
     )
 
-
-    df_gj = df_gj.dropna(
-        subset=["Nr. rendor"]
+    df["Hour"] = pd.to_numeric(
+        df["Hour"],
+        errors="coerce"
     )
 
+    # Largo rreshtat invalid
+    df = df[
+        df["Date"].notna()
+        &
+        df["Hour"].notna()
+    ].copy()
 
-    df_gj["Nr. rendor"] = (
-        df_gj["Nr. rendor"]
-        .astype(int)
+    # ==========================================================
+    # SORT
+    # ==========================================================
+
+    df = df.sort_values(
+        ["Date", "Hour"]
+    ).reset_index(drop=True)
+
+    # ==========================================================
+    # PRICES
+    # ==========================================================
+
+    prices = pd.read_excel(
+        source_path,
+        sheet_name="Prices"
     )
 
-    return df_j, df_gj
+    prices.columns = (
+        prices.columns
+        .astype(str)
+        .str.strip()
+    )
 
-if __name__ == "__main__":
-    j, gj = extract_excel()
+    # ==========================================================
+    # SUMMARY
+    # ==========================================================
 
-    print("\n===== Sheet J =====")
-    print(j.head())
-    print("\nDimensionet:")
-    print(j.shape)
-    print("\nKolonat:")
-    print(j.columns.tolist())
+    summary = pd.read_excel(
+        source_path,
+        sheet_name="summary"
+    )
 
-    print("\n===== Sheet GJ =====")
-    print(gj.head())
-    print("\nDimensionet:")
-    print(gj.shape)
+    summary.columns = (
+        summary.columns
+        .astype(str)
+        .str.strip()
+    )
+
+    return df, summary, prices
+
+def extract_hourly_excel(excel_path):
+    """
+    Extract hourly EnerCo data from a monthly workbook.
+    """
+
+    excel_path = Path(excel_path)
+
+    if not excel_path.exists():
+        raise FileNotFoundError(
+            f"Excel workbook not found: {excel_path}"
+        )
+
+    workbook = pd.ExcelFile(
+        excel_path
+    )
+
+    required_sheet = "imbalanc h"
+
+    if required_sheet not in workbook.sheet_names:
+        raise ValueError(
+            f"Missing sheet: {required_sheet}"
+        )
+
+    df = pd.read_excel(
+        excel_path,
+        sheet_name=required_sheet,
+    )
+
+    df.columns = (
+        df.columns
+        .astype(str)
+        .str.strip()
+    )
+
+    required_columns = [
+        "Supplier",
+        "Date",
+        "Hour",
+    ]
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            "Missing hourly columns: "
+            + ", ".join(missing_columns)
+        )
+
+    df = df[
+        df["Supplier"].notna()
+        &
+        df["Date"].notna()
+        &
+        df["Hour"].notna()
+    ].copy()
+
+    df = df[
+        df["Supplier"]
+        .astype(str)
+        .str.strip()
+        .eq("EnerCo")
+    ].copy()
+
+    df["Date"] = pd.to_datetime(
+        df["Date"],
+        dayfirst=True,
+        errors="coerce",
+    )
+
+    df["Hour"] = pd.to_numeric(
+        df["Hour"],
+        errors="coerce",
+    )
+
+    df = df[
+        df["Date"].notna()
+        &
+        df["Hour"].between(1, 24)
+    ].copy()
+
+    return (
+        df.sort_values(
+            ["Date", "Hour"]
+        )
+        .reset_index(drop=True)
+    )

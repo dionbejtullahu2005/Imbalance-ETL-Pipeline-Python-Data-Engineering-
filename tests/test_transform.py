@@ -1,43 +1,18 @@
-import pandas as pd
+import pytest
 
+from src.extract import extract_excel
 from src.transform import transform
 
 
 def test_transform_metrics():
-
-    df = pd.DataFrame(
-        {
-            "Data": [
-                "2026-06-01"
-            ],
-            "Ora": [
-                1
-            ],
-            "Furnizuesi X Furnizimi (EMIFurnizuesiX) [MWh]": [
-                -3.0
-            ],
-            "Konsumi i Nominuar i  Furnizuesi X (EKNKFurnizuesiX) [MWh]": [
-                -4.0
-            ],
-            "Energjia e Jobalancit (EJBFFurnizuesiXj) [MWh]": [
-                1.0
-            ],
-            "Çmimi i jobalancit [€/MWh]": [
-                50
-            ]
-        }
+    hourly, _, _ = extract_excel()
+    result = transform(hourly.head(2))
+    assert result.loc[0, "imbalance"] == pytest.approx(
+        result.loc[0, "imbalance_calculated"]
     )
-
-
-    result = transform(df)
-
-
-    assert result["new_actual"].iloc[0] == 3.0
-
-    assert result["old_predicted"].iloc[0] == 4.0
-
-    assert result["delta"].iloc[0] == 1.0
-
-    assert result["percent_delta"].iloc[0] == 25
-
-    assert result["payment"].iloc[0] == 50
+    assert result.loc[0, "total_euro"] == pytest.approx(
+        result.loc[0, "total_euro_calculated"]
+    )
+    assert result.loc[0, "plan_dev"] == pytest.approx(
+        result.loc[0, "plan_dev_calculated"]
+    )

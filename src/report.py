@@ -90,14 +90,14 @@ def plot_actual_vs_prediction(df):
 
     plt.plot(
         df["datetime"],
-        df["new_actual"],
-        label="NEW Actual"
+        df["consumption_mwh"],
+        label="Actual Consumption"
     )
 
     plt.plot(
         df["datetime"],
-        df["old_predicted"],
-        label="OLD Predicted"
+        df["plan_mwh"],
+        label="Nomination Plan"
     )
 
     plt.title(
@@ -268,13 +268,13 @@ def plot_forecasting_comparison(
 
     plt.plot(
         rolling_df["datetime"],
-        rolling_df["new_actual"],
+        rolling_df["imbalance"],
         label="NEW Actual"
     )
 
     plt.plot(
         rolling_df["datetime"],
-        rolling_df["old_predicted"],
+        rolling_df["plan_mwh"],
         label="OLD Prediction"
     )
 
@@ -343,7 +343,7 @@ def plot_forecast(
 
     plt.plot(
         forecast_df["datetime"],
-        forecast_df["predicted_MWh"],
+        forecast_df["predicted_imbalance_MWh"],
         label=f"{month_name.capitalize()} {year} Forecast"
     )
 

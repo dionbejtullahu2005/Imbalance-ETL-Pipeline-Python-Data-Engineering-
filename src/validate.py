@@ -1,6 +1,7 @@
 import pandas as pd
-from zoneinfo import ZoneInfo
+
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 
 try:
     TIMEZONE = ZoneInfo("Europe/Pristina")
@@ -8,17 +9,22 @@ try:
 except ZoneInfoNotFoundError:
     TIMEZONE = ZoneInfo("Europe/Tirane")
 
+
+# ==========================================================
+# COLUMN COMPARISON
+# ==========================================================
+
 def compare_columns(
-        df,
-        python_col,
-        excel_col,
-        tolerance=0.001
+    df,
+    excel_col,
+    calculated_col,
+    tolerance=0.001
 ):
 
     difference = (
-        df[python_col]
-        -
         df[excel_col]
+        -
+        df[calculated_col]
     ).abs()
 
     max_difference = (
@@ -30,42 +36,88 @@ def compare_columns(
     )
 
     return {
-        "column": python_col,
+        "column": excel_col,
         "max_difference": max_difference,
         "status": "PASS" if passed else "FAIL"
     }
+
+
+# ==========================================================
+# METRIC VALIDATION
+# ==========================================================
 
 def validate_metrics(df):
 
     results = []
 
-    results.append(
-        compare_columns(
-            df,
-            "new_actual",
-            "excel_new_actual"
-        )
-    )
+    # ------------------------------------------------------
+    # IMBALANCE
+    # Excel: Imbalanc
+    # Python: imbalance_calculated
+    # ------------------------------------------------------
 
     results.append(
         compare_columns(
             df,
-            "old_predicted",
-            "excel_old_predicted"
+            "imbalance",
+            "imbalance_calculated"
         )
     )
+
+    # ------------------------------------------------------
+    # TOTAL EURO
+    # Excel: Total Euro
+    # Python: total_euro_calculated
+    # ------------------------------------------------------
 
     results.append(
         compare_columns(
             df,
-            "delta",
-            "excel_delta"
+            "total_euro",
+            "total_euro_calculated"
         )
     )
 
-    return pd.DataFrame(results)
+    # ------------------------------------------------------
+    # PLAN DEVIATION
+    # Excel: Plan dev
+    # Python: plan_dev_calculated
+    # ------------------------------------------------------
 
-def expected_hours_for_date(date_value):
+    results.append(
+        compare_columns(
+            df,
+            "plan_dev",
+            "plan_dev_calculated"
+        )
+    )
+
+    # ------------------------------------------------------
+    # MAPE / ABSOLUTE PLAN ERROR
+    # Excel: MAPE
+    # Python: mape_calculated
+    # ------------------------------------------------------
+
+    results.append(
+        compare_columns(
+            df,
+            "mape",
+            "mape_calculated"
+        )
+    )
+
+    return pd.DataFrame(
+        results
+    )
+
+
+# ==========================================================
+# EXPECTED HOURS PER DATE
+# ==========================================================
+
+def expected_hours_for_date(
+    date_value
+):
 
     start = pd.Timestamp(
         date_value
@@ -88,9 +140,15 @@ def expected_hours_for_date(date_value):
         )
     )
 
+
+# ==========================================================
+# TIME SERIES VALIDATION
+# ==========================================================
+
 def validate_time_series(df):
 
     results = {}
+
     df = df.copy()
 
     # Përdor datetime nga transform.py
@@ -104,7 +162,12 @@ def validate_time_series(df):
         "datetime"
     )
 
+    # ------------------------------------------------------
+    # BASIC INFORMATION
+    # ------------------------------------------------------
+
     results["total_rows"] = len(df)
+    results["row_count_pass"] = len(df) > 0
 
     results["start_date"] = str(
         df["date"].min()
@@ -118,7 +181,10 @@ def validate_time_series(df):
         df["date"].nunique()
     )
 
-    # Kontrolli DST për çdo ditë
+    # ------------------------------------------------------
+    # HOURS PER DAY
+    # ------------------------------------------------------
+
     hours_per_day = (
         df
         .groupby("date")["hour"]
@@ -134,15 +200,17 @@ def validate_time_series(df):
     for day, count in hours_per_day.items():
 
         expected = (
-            expected_hours_for_date(day)
+            expected_hours_for_date(
+                day
+            )
         )
 
         if count != expected:
 
-            invalid_days[str(day)] = {
-
+            invalid_days[
+                str(day)
+            ] = {
                 "expected": expected,
-
                 "found": int(count)
             }
 
@@ -154,21 +222,23 @@ def validate_time_series(df):
         len(invalid_days) == 0
     )
 
-    # Renditja kohore
+    # ------------------------------------------------------
+    # CHRONOLOGICAL ORDER
+    # ------------------------------------------------------
+
     results["chronological_order"] = (
         df["datetime"]
         .is_monotonic_increasing
     )
 
-    # Orët që mungojnë
+    # ------------------------------------------------------
+    # MISSING HOURS
+    # ------------------------------------------------------
+
     full_range = pd.date_range(
-
         start=df["datetime"].min(),
-
         end=df["datetime"].max(),
-
         freq="h"
-
     )
 
     missing_hours = (
@@ -179,20 +249,21 @@ def validate_time_series(df):
     )
 
     results["missing_hours"] = (
-
         missing_hours
         .strftime(
             "%Y-%m-%d %H:%M"
         )
         .tolist()
-
     )
 
     results["missing_hours_pass"] = (
         len(missing_hours) == 0
     )
 
-    # Dublikate
+    # ------------------------------------------------------
+    # DUPLICATES
+    # ------------------------------------------------------
+
     duplicates = (
         df
         .duplicated(
