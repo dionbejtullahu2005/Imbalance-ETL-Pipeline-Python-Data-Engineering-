@@ -8,10 +8,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from src.features import create_features, FEATURE_COLUMNS, HISTORY_FEATURE_COLUMNS, validate_feature_frame
 from src.evaluation import recursive_predict
 
-# ==========================================================
 # PATHS
-# ==========================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 OUTPUT_DIR = (
@@ -48,10 +45,7 @@ GB_MODEL_PATH = (
 )
 
 
-# ==========================================================
 # LOAD MODELS
-# ==========================================================
-
 def load_forecast_models():
     """Load artifacts explicitly; importing this module has no model I/O."""
     return {
@@ -61,10 +55,7 @@ def load_forecast_models():
     }
 
 
-# ==========================================================
 # TIMEZONE
-# ==========================================================
-
 try:
     TIMEZONE = ZoneInfo(
         "Europe/Pristina"
@@ -75,15 +66,7 @@ except ZoneInfoNotFoundError:
         "Europe/Tirane"
     )
 
-
-# ==========================================================
-# MODEL FEATURES
-# ==========================================================
-
-# ==========================================================
 # CREATE FUTURE DATES
-# ==========================================================
-
 def create_future_dates(
     year,
     month
@@ -135,10 +118,7 @@ def create_future_dates(
     return future
 
 
-# ==========================================================
 # FORECAST MONTH
-# ==========================================================
-
 def forecast_month(
     history_df,
     year,
@@ -167,10 +147,7 @@ def forecast_month(
     gradient_boosting_model = models.get("gradient_boosting")
 
 
-    # ======================================================
     # VALIDATION
-    # ======================================================
-
     required_history_columns = [
         "datetime",
         "imbalance",
@@ -194,11 +171,7 @@ def forecast_month(
             )
         )
 
-
-    # ======================================================
     # DYNAMIC HISTORICAL PRICE
-    # ======================================================
-
     hourly_price = (
         history_df
         .groupby(
@@ -223,20 +196,14 @@ def forecast_month(
         average_imbalance_price = 0.0
 
 
-    # ======================================================
     # CREATE FORECAST PERIOD
-    # ======================================================
 
     future = create_future_dates(
         year,
         month
     )
 
-
-    # ======================================================
     # PREPARE WEATHER
-    # ======================================================
-
     weather_df = (
         weather_df
         .copy()
@@ -286,10 +253,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # MERGE WEATHER
-    # ======================================================
-
     future = future.merge(
         weather_df[
             [
@@ -302,10 +266,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # TEMPERATURE FALLBACK
-    # ======================================================
-
     historical_temperature_by_hour = (
         history_df
         .groupby(
@@ -381,10 +342,7 @@ def forecast_month(
             ] = fallback_temperature
 
 
-    # ======================================================
     # HISTORY
-    # ======================================================
-
     history = history_df[
         [
             "datetime",
@@ -447,10 +405,7 @@ def forecast_month(
         raise ValueError("At least 168 hourly historical observations are required")
 
 
-    # ======================================================
     # FALLBACK VALUES
-    # ======================================================
-
     historical_imbalance_median = (
         history_df[
             "imbalance"
@@ -465,10 +420,7 @@ def forecast_month(
         historical_imbalance_median = 0.0
 
 
-    # ======================================================
     # RESULT LISTS
-    # ======================================================
-
     linear_predictions = []
 
     random_forest_predictions = []
@@ -488,10 +440,7 @@ def forecast_month(
     interval_radii = []
 
 
-    # ======================================================
     # RECURSIVE HOURLY FORECAST
-    # ======================================================
-
     for _, row in future.iterrows():
 
         current_time = (
@@ -507,10 +456,7 @@ def forecast_month(
         )
 
 
-        # --------------------------------------------------
         # Current row without known imbalance
-        # --------------------------------------------------
-
         current_row = pd.DataFrame(
             {
                 "datetime": [
@@ -542,10 +488,7 @@ def forecast_month(
         )
 
 
-        # --------------------------------------------------
         # Create features
-        # --------------------------------------------------
-
         features = create_features(
             temp
         )
@@ -556,10 +499,7 @@ def forecast_month(
         )
 
 
-        # --------------------------------------------------
         # Prepare model input
-        # --------------------------------------------------
-
         X = pd.DataFrame(
             [
                 {
@@ -575,10 +515,7 @@ def forecast_month(
         )
 
 
-        # --------------------------------------------------
         # Fill lag/rolling missing values
-        # --------------------------------------------------
-
         missing_history_features = [
             column for column in HISTORY_FEATURE_COLUMNS
             if pd.isna(X.at[0, column])
@@ -590,10 +527,7 @@ def forecast_month(
             )
 
 
-        # --------------------------------------------------
         # Temperature fallback
-        # --------------------------------------------------
-
         if pd.isna(
             X.at[
                 0,
@@ -608,11 +542,7 @@ def forecast_month(
                 overall_temperature_median
             )
 
-
-        # --------------------------------------------------
         # Time features fallback
-        # --------------------------------------------------
-
         time_columns = [
             "hour_sin",
             "hour_cos",
@@ -631,18 +561,11 @@ def forecast_month(
             )
         )
 
-
-        # --------------------------------------------------
         # Correct feature order
-        # --------------------------------------------------
-
         X = validate_feature_frame(X)
 
 
-        # ==================================================
         # MODEL PREDICTIONS
-        # ==================================================
-
         linear_prediction = (
             float(linear_model.predict(X)[0]) if linear_model is not None else np.nan
         )
@@ -658,10 +581,7 @@ def forecast_month(
         )
 
 
-        # ==================================================
         # SEASONAL PREDICTION
-        # ==================================================
-
         seasonal_prediction = (
             current.get(
                 "lag168",
@@ -704,13 +624,7 @@ def forecast_month(
         )
 
 
-        # ==================================================
         # FINAL MODEL
-        #
-        # July backtest winner:
-        # Gradient Boosting
-        # ==================================================
-
         final_prediction = float(selected_model.predict(X)[0])
 
         hour_radius = (
@@ -723,10 +637,7 @@ def forecast_month(
             )
         )
 
-        # ==================================================
         # 90% CONFORMAL PREDICTION INTERVAL
-        # ==================================================
-
         lower_prediction = (
             final_prediction
             -
@@ -739,10 +650,7 @@ def forecast_month(
             hour_radius
         )
 
-        # ==================================================
         # SAVE MODEL PREDICTIONS
-        # ==================================================
-
         linear_predictions.append(
             linear_prediction
         )
@@ -775,10 +683,7 @@ def forecast_month(
             hour_radius
         )
 
-        # ==================================================
         # DYNAMIC PRICE
-        # ==================================================
-
         estimated_price = (
             hourly_price.get(
                 row[
@@ -803,10 +708,7 @@ def forecast_month(
         )
 
 
-        # ==================================================
         # RECURSIVE HISTORY UPDATE
-        # ==================================================
-
         history = pd.concat(
             [
                 history,
@@ -831,10 +733,7 @@ def forecast_month(
         )
 
 
-    # ======================================================
     # OUTPUT COLUMNS
-    # ======================================================
-
     future[
         "linear_prediction_MWh"
     ] = (
@@ -859,11 +758,7 @@ def forecast_month(
         seasonal_predictions
     )
 
-
-    # ======================================================
     # FINAL FORECAST
-    # ======================================================
-
     future[
         "predicted_imbalance_MWh"
     ] = (
@@ -871,10 +766,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # INTERVAL
-    # ======================================================
-
     future[
         "lower_bound_MWh"
     ] = (
@@ -895,10 +787,7 @@ def forecast_month(
     future["weather_mode"] = weather_mode
 
 
-    # ======================================================
     # EXPECTED ERROR
-    # ======================================================
-
     future[
         "expected_recursive_MAE_MWh"
     ] = (
@@ -906,10 +795,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # ESTIMATED DYNAMIC PRICE
-    # ======================================================
-
     future[
         "estimated_imbalance_price_EUR_MWh"
     ] = (
@@ -917,10 +803,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # EXPECTED ERROR COST
-    # ======================================================
-
     future[
         "estimated_error_cost_EUR"
     ] = (
@@ -938,10 +821,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # TOTAL EXPECTED COST
-    # ======================================================
-
     total_expected_error_cost = (
         future[
             "estimated_error_cost_EUR"
@@ -950,10 +830,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # SAVE CSV
-    # ======================================================
-
     output_file = (
         OUTPUT_DIR
         /
@@ -966,10 +843,7 @@ def forecast_month(
     )
 
 
-    # ======================================================
     # FINAL OUTPUT
-    # ======================================================
-
     print(
         "Forecast hours:",
         len(
@@ -1016,18 +890,8 @@ def forecast_future_months(
     selected_model_name,
     models,
 ):
-    """
-    Forecast sequential future months.
-
-    If the final historical month is incomplete, the missing
-    final hours are first generated as a recursive bridge
-    forecast. This preserves lag and rolling-feature continuity.
-    """
-
-    # ======================================================
+    
     # PREPARE HISTORY
-    # ======================================================
-
     history = history_df.copy()
 
     required_history_columns = [
@@ -1109,10 +973,7 @@ def forecast_future_months(
         .max()
     )
 
-    # ======================================================
     # TARGET PERIOD
-    # ======================================================
-
     target_period = pd.Period(
         year=target_year,
         month=target_month,
@@ -1129,10 +990,7 @@ def forecast_future_months(
             "historical month."
         )
 
-    # ======================================================
     # COMPLETE PARTIAL FINAL HISTORY MONTH
-    # ======================================================
-
     history_month_end = (
         historical_period
         .end_time
@@ -1167,10 +1025,7 @@ def forecast_future_months(
             bridge_end,
         )
 
-        # --------------------------------------------------
         # BRIDGE WEATHER
-        # --------------------------------------------------
-
         bridge_weather = weather_loader(
             bridge_start.strftime(
                 "%Y-%m-%d"
@@ -1249,10 +1104,7 @@ def forecast_future_months(
             validate="one_to_one",
         )
 
-        # --------------------------------------------------
         # TRAINING-ONLY TEMPERATURE CLIMATOLOGY
-        # --------------------------------------------------
-
         temperature_history = (
             history[
                 [
@@ -1338,10 +1190,7 @@ def forecast_future_months(
                 "temperature values."
             )
 
-        # --------------------------------------------------
         # RECURSIVE BRIDGE PREDICTIONS
-        # --------------------------------------------------
-
         bridge_predictions = recursive_predict(
             selected_model,
             history,
@@ -1409,10 +1258,7 @@ def forecast_future_months(
             len(bridge_history),
         )
 
-    # ======================================================
     # VALIDATE HISTORY CONTINUITY
-    # ======================================================
-
     full_history_range = pd.date_range(
         start=history["datetime"].min(),
         end=history["datetime"].max(),
@@ -1441,10 +1287,7 @@ def forecast_future_months(
             + ", ".join(preview)
         )
 
-    # ======================================================
     # FIRST MONTH TO FORECAST
-    # ======================================================
-
     last_history_timestamp = (
         history["datetime"]
         .max()
@@ -1462,10 +1305,7 @@ def forecast_future_months(
             "forecastable future month."
         )
 
-    # ======================================================
     # FORECAST MONTHS SEQUENTIALLY
-    # ======================================================
-
     target_forecast = None
     output_files = []
 
@@ -1561,10 +1401,7 @@ def forecast_future_months(
             output_file
         )
 
-        # --------------------------------------------------
         # EXTEND RECURSIVE HISTORY
-        # --------------------------------------------------
-
         extension = pd.DataFrame(
             {
                 "datetime":
@@ -1610,10 +1447,7 @@ def forecast_future_months(
             .reset_index(drop=True)
         )
 
-    # ======================================================
     # FINAL VALIDATION
-    # ======================================================
-
     if target_forecast is None:
         raise ValueError(
             "No target forecast was generated."
