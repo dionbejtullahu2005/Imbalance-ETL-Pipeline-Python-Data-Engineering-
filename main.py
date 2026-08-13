@@ -46,10 +46,7 @@ from src.calibrate_interval import (
 )
 
 
-# ==========================================================
 # CONFIGURATION
-# ==========================================================
-
 BASE_DIR = Path(__file__).resolve().parent
 
 JUNE_FILE = (
@@ -76,10 +73,7 @@ CONFORMAL_SPLITS = 5
 MIN_HOURLY_SAMPLES = 30
 
 
-# ==========================================================
 # DATETIME NORMALIZATION
-# ==========================================================
-
 def normalize_datetime_column(df):
     """
     Normalize a dataframe's datetime column.
@@ -119,10 +113,7 @@ def normalize_datetime_column(df):
     return result
 
 
-# ==========================================================
 # DATA VALIDATION
-# ==========================================================
-
 def validate_input_data(df):
     """
     Validate transformed hourly input data.
@@ -201,9 +192,7 @@ def validate_input_data(df):
             + ", ".join(failed_metrics)
         )
 
-    # ======================================================
     # HISTORICAL REPORTS
-    # ======================================================
 
     hourly_report, peak_report, deviation_distribution = (
         generate_reports(df)
@@ -211,10 +200,7 @@ def validate_input_data(df):
 
     return time_result, metric_result
 
-# ==========================================================
 # MODEL SELECTION
-# ==========================================================
-
 def select_final_model(
     model_result,
     trained_models,
@@ -272,10 +258,7 @@ def select_final_model(
     )
 
 
-# ==========================================================
 # TARGET MONTH HELPERS
-# ==========================================================
-
 def target_month_dates(
     year,
     month,
@@ -301,10 +284,7 @@ def target_month_dates(
     )
 
 
-# ==========================================================
 # MAIN PIPELINE
-# ==========================================================
-
 def main():
 
     forecast_start, forecast_end = (
@@ -323,10 +303,7 @@ def main():
         f"{FORECAST_YEAR}-{FORECAST_MONTH:02d}",
     )
 
-    # ======================================================
     # 1. EXTRACT AND TRANSFORM
-    # ======================================================
-
     june_raw = extract_hourly_excel(
         JUNE_FILE
     )
@@ -382,10 +359,7 @@ def main():
         df_features
     )
 
-    # ======================================================
     # 2. TRAINING WEATHER
-    # ======================================================
-
     print("\nLOADING TRAINING WEATHER DATA")
 
     training_weather = (
@@ -414,9 +388,7 @@ def main():
         )
     )
 
-    # ======================================================
     # 3. MERGE TRAINING WEATHER
-    # ======================================================
 
     df_features = df_features.merge(
         training_weather,
@@ -444,23 +416,16 @@ def main():
             f"{missing_training_weather} hours."
         )
 
-    # ======================================================
     # 4. VALIDATION
-    # ======================================================
 
     validate_input_data(df)
 
-    # ======================================================
     # 5. SAVE PROCESSED DATA
-    # ======================================================
 
     parquet_file = save_parquet(df)
     sqlite_file = save_sqlite(df)
 
-    # ======================================================
     # 6. RECURSIVE MODEL COMPARISON
-    # ======================================================
-
     print("\n" + "=" * 70)
     print("RECURSIVE MODEL SELECTION")
     print("=" * 70)
@@ -489,9 +454,7 @@ def main():
         )
     )
 
-    # ======================================================
     # 7. TRAIN CANDIDATE MODELS
-    # ======================================================
 
     trained_models = train_explainable_models(
         df_features
@@ -506,10 +469,7 @@ def main():
         trained_models,
     )
 
-    # ======================================================
     # 8. PERSIST FINAL MODEL
-    # ======================================================
-
     final_model, final_model_path = (
         train_final_model(
             df_features,
@@ -528,10 +488,7 @@ def main():
         final_model_path,
     )
 
-    # ======================================================
     # 9. FINAL-MODEL FEATURE IMPORTANCE
-    # ======================================================
-
     importance_df = extract_feature_importance(
         df_features,
         final_model,
@@ -543,9 +500,7 @@ def main():
         selected_model_name,
     )
 
-    # ======================================================
     # 10. RECURSIVE CONFORMAL CALIBRATION
-    # ======================================================
 
     calibration = calibrate_conformal_interval(
         final_model,
@@ -573,9 +528,7 @@ def main():
         calibration["coverage"]
     )
 
-    # ======================================================
     # 11. FORECAST TARGET AND INTERMEDIATE MONTHS
-    # ======================================================
 
     print("\n" + "=" * 70)
     print("FUTURE MONTH FORECAST")
@@ -618,9 +571,7 @@ def main():
 
     forecast_file = forecast_files[-1]
 
-    # ======================================================
     # 12. TARGET-MONTH FORECAST GRAPH
-    # ======================================================
 
     forecast_graph = plot_forecast(
         df,
@@ -629,9 +580,7 @@ def main():
         month=FORECAST_MONTH,
     )
 
-    # ======================================================
     # 13. NOMINATION STRATEGY
-    # ======================================================
 
     strategy_results = (
         simulate_nomination_strategies(df)
@@ -643,9 +592,7 @@ def main():
         )
     )
 
-    # ======================================================
     # 14. ANOMALY DETECTION
-    # ======================================================
 
     anomalies = detect_anomalies(
         df,
@@ -653,10 +600,7 @@ def main():
         method="mad",
     )
 
-    # ======================================================
     # 15. WEATHER COVERAGE
-    # ======================================================
-
     weather_mode_values = (
         month_forecast["weather_mode"]
         .dropna()
@@ -685,10 +629,7 @@ def main():
             f"temperature for {fallback_hours} hours."
         )
 
-    # ======================================================
     # 16. FINAL SUMMARY
-    # ======================================================
-
     estimated_cost_proxy = float(
         month_forecast[
             "estimated_error_cost_EUR"
