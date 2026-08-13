@@ -24,10 +24,7 @@ from src.features import FEATURE_COLUMNS
 from src.evaluation import recursive_timeseries_residuals
 
 
-# ==========================================================
 # MODEL DIRECTORY
-# ==========================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_DIR = (
@@ -43,15 +40,7 @@ MODEL_DIR.mkdir(
     exist_ok=True
 )
 
-
-# ==========================================================
-# FEATURES
-# ==========================================================
-
-# ==========================================================
 # MODELS
-# ==========================================================
-
 MODELS = {
 
     "Linear Regression":
