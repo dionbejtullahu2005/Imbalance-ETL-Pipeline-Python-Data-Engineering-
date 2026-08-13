@@ -22,10 +22,7 @@ def extract_excel(excel_path=None):
     if missing_sheets:
         raise ValueError("Missing Excel sheets: " + ", ".join(missing_sheets))
 
-    # ==========================================================
     # HOURLY DATA
-    # ==========================================================
-
     df = pd.read_excel(
         source_path,
         sheet_name="imbalanc h"
@@ -38,10 +35,7 @@ def extract_excel(excel_path=None):
         .str.strip()
     )
 
-    # ==========================================================
     # MBAN VETËM ORËT REALE
-    # ==========================================================
-
     df = df[
         df["Supplier"].notna()
         &
@@ -58,10 +52,7 @@ def extract_excel(excel_path=None):
         .eq("EnerCo")
     ].copy()
 
-    # ==========================================================
     # DATA
-    # ==========================================================
-
     df["Date"] = pd.to_datetime(
         df["Date"],
         dayfirst=True,
@@ -80,18 +71,12 @@ def extract_excel(excel_path=None):
         df["Hour"].notna()
     ].copy()
 
-    # ==========================================================
     # SORT
-    # ==========================================================
-
     df = df.sort_values(
         ["Date", "Hour"]
     ).reset_index(drop=True)
 
-    # ==========================================================
     # PRICES
-    # ==========================================================
-
     prices = pd.read_excel(
         source_path,
         sheet_name="Prices"
@@ -103,10 +88,7 @@ def extract_excel(excel_path=None):
         .str.strip()
     )
 
-    # ==========================================================
     # SUMMARY
-    # ==========================================================
-
     summary = pd.read_excel(
         source_path,
         sheet_name="summary"
