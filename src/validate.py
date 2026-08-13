@@ -10,10 +10,7 @@ except ZoneInfoNotFoundError:
     TIMEZONE = ZoneInfo("Europe/Tirane")
 
 
-# ==========================================================
 # COLUMN COMPARISON
-# ==========================================================
-
 def compare_columns(
     df,
     excel_col,
@@ -42,20 +39,14 @@ def compare_columns(
     }
 
 
-# ==========================================================
 # METRIC VALIDATION
-# ==========================================================
-
 def validate_metrics(df):
 
     results = []
 
-    # ------------------------------------------------------
     # IMBALANCE
     # Excel: Imbalanc
     # Python: imbalance_calculated
-    # ------------------------------------------------------
-
     results.append(
         compare_columns(
             df,
@@ -64,12 +55,9 @@ def validate_metrics(df):
         )
     )
 
-    # ------------------------------------------------------
     # TOTAL EURO
     # Excel: Total Euro
     # Python: total_euro_calculated
-    # ------------------------------------------------------
-
     results.append(
         compare_columns(
             df,
@@ -78,11 +66,9 @@ def validate_metrics(df):
         )
     )
 
-    # ------------------------------------------------------
     # PLAN DEVIATION
     # Excel: Plan dev
     # Python: plan_dev_calculated
-    # ------------------------------------------------------
 
     results.append(
         compare_columns(
@@ -92,11 +78,9 @@ def validate_metrics(df):
         )
     )
 
-    # ------------------------------------------------------
     # MAPE / ABSOLUTE PLAN ERROR
     # Excel: MAPE
     # Python: mape_calculated
-    # ------------------------------------------------------
 
     results.append(
         compare_columns(
@@ -111,10 +95,7 @@ def validate_metrics(df):
     )
 
 
-# ==========================================================
 # EXPECTED HOURS PER DATE
-# ==========================================================
-
 def expected_hours_for_date(
     date_value
 ):
@@ -140,11 +121,7 @@ def expected_hours_for_date(
         )
     )
 
-
-# ==========================================================
 # TIME SERIES VALIDATION
-# ==========================================================
-
 def validate_time_series(df):
 
     results = {}
@@ -162,10 +139,7 @@ def validate_time_series(df):
         "datetime"
     )
 
-    # ------------------------------------------------------
     # BASIC INFORMATION
-    # ------------------------------------------------------
-
     results["total_rows"] = len(df)
     results["row_count_pass"] = len(df) > 0
 
@@ -181,9 +155,7 @@ def validate_time_series(df):
         df["date"].nunique()
     )
 
-    # ------------------------------------------------------
     # HOURS PER DAY
-    # ------------------------------------------------------
 
     hours_per_day = (
         df
@@ -222,19 +194,13 @@ def validate_time_series(df):
         len(invalid_days) == 0
     )
 
-    # ------------------------------------------------------
     # CHRONOLOGICAL ORDER
-    # ------------------------------------------------------
-
     results["chronological_order"] = (
         df["datetime"]
         .is_monotonic_increasing
     )
 
-    # ------------------------------------------------------
-    # MISSING HOURS
-    # ------------------------------------------------------
-
+    # #MISSING HOURS
     full_range = pd.date_range(
         start=df["datetime"].min(),
         end=df["datetime"].max(),
@@ -260,9 +226,7 @@ def validate_time_series(df):
         len(missing_hours) == 0
     )
 
-    # ------------------------------------------------------
     # DUPLICATES
-    # ------------------------------------------------------
 
     duplicates = (
         df
